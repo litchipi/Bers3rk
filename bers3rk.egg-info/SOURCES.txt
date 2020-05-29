@@ -1,0 +1,8 @@
+README.md
+setup.py
+bers3rk/__init__.py
+bers3rk/bers3rk.py
+bers3rk.egg-info/PKG-INFO
+bers3rk.egg-info/SOURCES.txt
+bers3rk.egg-info/dependency_links.txt
+bers3rk.egg-info/top_level.txt

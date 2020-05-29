@@ -8,7 +8,6 @@ import os
 import sys
 import json
 import time
-import random
 import select
 import multiprocessing as mproc
 
@@ -19,14 +18,6 @@ COLOR_NONE = "\033[0m"
 CLEAR_LINE = "\033[2K\r" + COLOR_NONE
 
 FORBIDDEN_CHARS = ["#"]
-
-DISPLAY_DEBUG_KEYS=["word_tried"]
-
-def heads_tails(f, let):
-    if random.random() > 0.5:
-        return f(let)
-    else:
-        return let
 
 class Berserk:
     default_params = {
@@ -109,10 +100,6 @@ class Berserk:
         self.add_modif_function(lambda x: x[-4:], 100, group="slice")
         self.add_modif_function(lambda x: x[-5:], 100, group="slice")
 
-    def allow_random_modif(self):
-        for s in self.soldiers:
-            s.allow_random_modif()
-
     def add_stop_condition(self, f):
         for s in self.soldiers:
             s.add_stop_condition(f)
@@ -144,6 +131,7 @@ class Berserk:
         return "[{:7.4f}% done] - {}°C - {:6.4f} secs delay between each request - Wordlist: {}".format(done, self.temp, self.delay, self.wl)
 
     def display_results(self, finished_time):
+        os.system("clear")
         print(CLEAR_LINE + COLOR_ORANGE + "Finished in " + str(finished_time) + " secs" + COLOR_NONE)
         self.display_found()
 
@@ -154,11 +142,11 @@ class Berserk:
             self.display_debug()
 
     def display_debug(self):
-        index_indics=["|", "/", "-", "\\"]
+        index_indics=["|", "/", "-", "\\", "~", "*", "x", "o", "@", "#"]
         index = COLOR_GREEN + "[" + index_indics[int(time.time()*10)%len(index_indics)] + "]"
         for key, val in self.shared_ress.items():
-            if key.lstrip("soldier")[2:] in DISPLAY_DEBUG_KEYS:
-                print(CLEAR_LINE + index + COLOR_PURPLE + str(key) + COLOR_ORANGE + "\t-> " + str(val) + COLOR_NONE)
+            print(CLEAR_LINE + index + COLOR_PURPLE + str(key))
+            print(CLEAR_LINE + index + COLOR_ORANGE +"\t-> " + str(val) + COLOR_NONE)
 
     def display_found(self):
         for f in set(self.results):
@@ -168,14 +156,13 @@ class Berserk:
         if self.params["quit_on_first_success"] and not all([s.is_alive() for s in self.soldiers]):
             self.finished = len(self.results) > 0
             return False
-
-        if not self.allow_temp_management:
+         if not self.allow_temp_management:
             return True
 
         change = False
         sensors = json.loads(os.popen("sensors -j").read())
         try:
-            self.temp = list(sensors[self.params["sensor_device_name"]][self.params["sensor_data_name"]].values())[0]
+            self.temp = sensors[self.params["sensor_device_name"]["sensor_data_name"]]
         except IndexError:
             self.temp = 0   # Will run at 100% all the time
 
@@ -233,15 +220,12 @@ class Soldier(mproc.Process):
         sys.exit(0)
 
     def write_shared_ress(self, dataname, data):
-        try:
-            self.shared_ress["soldier" + str(self.soldier_nb) + "_" + dataname] = data
-        except FileNotFoundError:
-            sys.exit(0)
+        self.shared_ress["soldier" + str(self.soldier_nb) + "_" + dataname] = data
 
     def skip_or_treat(self, n):
         return (n%self.totsoldier) != self.soldier_nb
 
-    def fuzz_recursive(self, wl, lcount, past_data=[], niter=0, fct=lambda x: x, called=False, write_shared_ress_try=False):
+    def fuzz_recursive(self, wl, lcount, past_data=[], niter=0, fct=lambda x: x, called=False):
         n = 0
         wl.seek(0)
         for n, word in enumerate(wl):
@@ -268,7 +252,6 @@ class Soldier(mproc.Process):
                 continue
 
 
-            if write_shared_ress_try: self.write_shared_ress("word_tried", data)
             time.sleep(max(0, self.shared_ress["delay"]))
  #           time.sleep(max(0, (self.delayparams["try_delay"]/1000) - (time.time()-self.last_try)))
             self.last_try = time.time()
@@ -315,16 +298,8 @@ class Soldier(mproc.Process):
             self.modif_functions[group] = list()
         self.modif_functions[group].append((fct, priority))
 
-    def randomize_word(self, w):
-        all_fcts = [fct for k, fct in self.get_modif_functions().items()]
-        return "".join([heads_tails(random.choice(all_fcts)[0], let) for let in w])
-
-    def allow_random_modif(self):
-        self.modif_functions["random"] = list()
-        self.modif_functions["random"].append((self.randomize_word, 1))
-
     def get_modif_functions(self):
-        return {k:[f for f, p in sorted(l, key=lambda x: x[1], reverse=True)] for k, l in self.modif_functions.items() if (k != "random")}
+        return {k:[f for f, p in sorted(l, key=lambda x: x[1], reverse=True)] for k, l in self.modif_functions.items()}
 
     def add_stop_condition(self, condition):        #Will pass results found to the function "condition", if True will stop
         self.stop_conditions.append(condition)
@@ -335,7 +310,7 @@ class Soldier(mproc.Process):
         except Exception:
             exc_buffer = io.StringIO()
             traceback.print_exc(file=exc_buffer)
-            print("Process {} error: \t{}".format(self.soldier_nb, exc_buffer.getvalue()))
+            print("Process {} error:\n\t{}".format(self.soldier_nb, exc_buffer.getvalue()))
             sys.exit(0)
 
     def start_bruteforce(self):
@@ -367,9 +342,3 @@ class Soldier(mproc.Process):
         for n, f in enumerate(fcts[fct_groups[0]]):
             if self.skip_or_treat(n):
                 steps = self.mix_fcts(wl, lcount, fcts, fct_groups[1:], totposs=totposs, steps=steps, past_fct=f)
-
-        if "random" in self.modif_functions.keys():
-            while self.allowed:
-                self.write_shared_ress("infinite_mode", self.allowed)
-                for f in self.modif_functions["random"]:
-                    self.fuzz_recursive(wl, lcount, fct=f[0], called=True, write_shared_ress_try=True)

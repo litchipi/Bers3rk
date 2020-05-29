@@ -9,10 +9,8 @@ WINS = ["QwErTy", "V3RIZK4", "smh413", "sch00l13", "PUSSYCATD0LLS", "PoOp3", "20
 def fct_try(data, params):
     return data in WINS
 
-brute = Berserk(fct_try, {"max_temp_C":80})
+brute = Berserk(fct_try, {"max_temp_C":80, "sensor_device_name":"k10temp-pci-00c3", "sensor_data_name":"Tctl"})
 brute.add_word_default_modif()
 brute.add_stop_condition(lambda r: all([w in r for w in WINS]))
-#brute.run("/home/eve/Documents/pentest_tools/bers3rk/exemples/tester_wordlist")
-#brute.run("/home/eve/Documents/pentest_tools/wordlists/rockyou.txt")
-brute.run("/home/eve/Documents/pentest_tools/wordlists/10-million-password-list-top-100000.txt")
+brute.run("/usr/share/seclists/Passwords/Common-Credentials/10-million-password-list-top-1000000.txt")
 print(all([w in brute.results for w in WINS]))

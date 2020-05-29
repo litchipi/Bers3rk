@@ -1,0 +1,11 @@
+- Outputs can't be disabled for now, used as a CLI tool but can't be "plugged" into another software for now as it will continue to output its TUI
+
+- Detect wordlist format, and handle it (if compressed archive)
+
+- OPTIMISATION
+
+- Done % doesn't really work
+
+- Add rules:
+	Length -> Only try words of a certain length
+	Mask -> Password "masks" (regex)

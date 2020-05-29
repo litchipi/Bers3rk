@@ -37,6 +37,9 @@ brute.add_stop_condition(lambda r: all([w in r for w in WINS]))
 brute.run(data)     # Launches the bruteforce session
 ```
 
+## Requierments
+- lm-sensors  Allow bruteforce control depending on temperature
+
 ## Configuration
 Here are the default configuration you can mess with:
 
@@ -134,5 +137,6 @@ if __name__ == "__main__":
 ```
 
 ## TODO
-* For now it runs on a single thread, a single process, and it's ok for my little bruteforces, but it may be a good idea to empower this.
-* Outputs can't be disabled for now, used as a CLI tool but can't be "plugged" into another software for now as it will continue to output its TUI
+* Do it faster
+* Fix "% done" count
+* Add more word manipulation functions
